@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../workout/pages/workout_page.dart';
 import '../../workout/data/workout_data.dart';
 import '../../workout/widgets/workout_card.dart';
+import '../../workout/widgets/progress_chart.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -116,6 +117,18 @@ class HomePage extends StatelessWidget {
 
             const SizedBox(height: 10),
 
+            // Gráfico de progresso
+            const SizedBox(height: 20),
+
+            const Text(
+              'Seu progresso 📊',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 10),
+
+            ProgressChart(workouts: workouts),
+
             // Lista de treinos
             Expanded(
               child: ListView.builder(
@@ -136,11 +149,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget buildWorkoutCard(
-    BuildContext context,
-    String title,
-    String duration,
-  ) {
+  Widget buildWorkoutCard(BuildContext context, String title, String duration) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       splashColor: Colors.green.withValues(alpha: 0.2),
