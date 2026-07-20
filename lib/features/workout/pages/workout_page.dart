@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+
 class WorkoutPage extends StatelessWidget {
   final String title;
   final String duration;

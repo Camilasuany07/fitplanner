@@ -1,22 +1,59 @@
 import 'package:flutter/material.dart';
-import '../../workout/pages/workout_page.dart';
 import '../../workout/data/workout_data.dart';
 import '../../workout/widgets/workout_card.dart';
 import '../../workout/widgets/progress_chart.dart';
+import '../../workout/pages/add_workout_page.dart';
+import '../../workout/services/storage_service.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+
+  @override
+  void initState() {
+    super.initState();
+    loadData();
+  }
+
+  Future<void> loadData() async {
+    final savedWorkouts = await StorageService.loadWorkouts();
+
+    setState(() {
+      workouts.clear();
+      workouts.addAll(savedWorkouts);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddWorkoutPage()),
+          );
+
+          await loadData();
+        },
+        backgroundColor: const Color.fromARGB(255, 0, 0, 0),
+        child: const Icon(Icons.add),
+      ),
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color.fromARGB(195, 0, 0, 0),
         title: const Text(
           'FitPlanner',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -30,35 +67,37 @@ class HomePage extends StatelessWidget {
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // Card resumo
+            // 🔥 CARD DINÂMICO
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF00C853), Color(0xFF64DD17)],
+                  colors: [
+                    Color.fromARGB(255, 2, 148, 63),
+                    Color.fromARGB(255, 112, 240, 32),
+                  ],
                 ),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Treinos hoje',
                         style: TextStyle(color: Colors.white),
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Text(
-                        '2',
-                        style: TextStyle(
+                        '${workouts.length}',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -68,11 +107,14 @@ class HomePage extends StatelessWidget {
                   ),
                   Column(
                     children: [
-                      Text('Calorias', style: TextStyle(color: Colors.white)),
-                      SizedBox(height: 8),
+                      const Text(
+                        'Calorias',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
                       Text(
-                        '520 kcal',
-                        style: TextStyle(
+                        '${workouts.fold(0, (sum, w) => sum + w.calories)} kcal',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -85,7 +127,7 @@ class HomePage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Botão iniciar treino
+            // BOTÃO
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -117,11 +159,8 @@ class HomePage extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // Gráfico de progresso
-            const SizedBox(height: 20),
-
             const Text(
-              'Seu progresso 📊',
+              'Seu progresso',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
@@ -129,7 +168,9 @@ class HomePage extends StatelessWidget {
 
             ProgressChart(workouts: workouts),
 
-            // Lista de treinos
+            const SizedBox(height: 10),
+
+            // 🔥 LISTA
             Expanded(
               child: ListView.builder(
                 itemCount: workouts.length,
@@ -143,68 +184,6 @@ class HomePage extends StatelessWidget {
                 },
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget buildWorkoutCard(BuildContext context, String title, String duration) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      splashColor: Colors.green.withValues(alpha: 0.2),
-      highlightColor: Colors.transparent,
-      onTap: () {
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            pageBuilder:
-                (context, animation, secondaryAnimation) =>
-                    WorkoutPage(title: title, duration: duration),
-            transitionsBuilder: (
-              context,
-              animation,
-              secondaryAnimation,
-              child,
-            ) {
-              const begin = Offset(1.0, 0.0); // vem da direita
-              const end = Offset.zero;
-              const curve = Curves.easeInOut;
-
-              final tween = Tween(
-                begin: begin,
-                end: end,
-              ).chain(CurveTween(curve: curve));
-
-              final offsetAnimation = animation.drive(tween);
-
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(position: offsetAnimation, child: child),
-              );
-            },
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.fitness_center, color: Colors.green),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            Text(duration),
           ],
         ),
       ),

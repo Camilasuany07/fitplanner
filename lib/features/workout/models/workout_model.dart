@@ -1,3 +1,5 @@
+
+
 class Workout {
   final String name;
   final String duration;
@@ -10,4 +12,24 @@ class Workout {
     required this.calories,
     required this.exercises,
   });
+
+  // 🔥 converter para Map
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'duration': duration,
+      'calories': calories,
+      'exercises': exercises,
+    };
+  }
+
+  // 🔥 criar a partir do Map
+  factory Workout.fromMap(Map<String, dynamic> map) {
+    return Workout(
+      name: map['name'],
+      duration: map['duration'],
+      calories: map['calories'],
+      exercises: List<String>.from(map['exercises']),
+    );
+  }
 }
