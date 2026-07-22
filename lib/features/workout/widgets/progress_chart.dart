@@ -5,53 +5,59 @@ import '../models/workout_model.dart';
 class ProgressChart extends StatelessWidget {
   final List<Workout> workouts;
 
-  const ProgressChart({super.key, required this.workouts});
+ ProgressChart({super.key, required this.workouts});
+
+  // Lista dos dias
+  final List<String> weekDays = [
+    'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'
+  ];
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 evita erro se não tiver dados
-    if (workouts.isEmpty) {
-      return const SizedBox(
-        height: 200,
-        child: Center(
-          child: Text("Sem dados ainda"),
-        ),
-      );
-    }
-
     return SizedBox(
       height: 220,
       child: LineChart(
         LineChartData(
-          minY: 0,
-          maxY: workouts
-                  .map((w) => w.calories)
-                  .reduce((a, b) => a > b ? a : b)
-                  .toDouble() +
-              100,
-
-          gridData: FlGridData(show: true),
-
+          gridData: FlGridData(show: false),
           borderData: FlBorderData(show: false),
 
+          // 👇 CONFIGURAÇÃO DOS TÍTULOS
           titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: 1,
+                getTitlesWidget: (value, meta) {
+                  int index = value.toInt();
+
+                  if (index >= 0 && index < weekDays.length) {
+                    return Text(
+                      weekDays[index],
+                      style: const TextStyle(fontSize: 12),
+                    );
+                  }
+
+                  return const Text('');
+                },
+              ),
+            ),
+
             leftTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: true),
             ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: true),
+
+            topTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+
+            rightTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
             ),
           ),
 
           lineBarsData: [
             LineChartBarData(
               isCurved: true,
-              color: Colors.greenAccent,
-              barWidth: 4,
-              isStrokeCapRound: true,
-
-              dotData: FlDotData(show: true),
-
               spots: workouts.asMap().entries.map((entry) {
                 int index = entry.key;
                 final workout = entry.value;
@@ -61,6 +67,9 @@ class ProgressChart extends StatelessWidget {
                   workout.calories.toDouble(),
                 );
               }).toList(),
+              barWidth: 4,
+              isStrokeCapRound: true,
+              dotData: FlDotData(show: true),
             ),
           ],
         ),

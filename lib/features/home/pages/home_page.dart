@@ -4,6 +4,7 @@ import '../../workout/widgets/workout_card.dart';
 import '../../workout/widgets/progress_chart.dart';
 import '../../workout/pages/add_workout_page.dart';
 import '../../workout/services/storage_service.dart';
+import '../../workout/pages/workout_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,7 +14,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   @override
   void initState() {
     super.initState();
@@ -50,10 +50,7 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: const Color.fromARGB(195, 0, 0, 0),
         title: const Text(
           'FitPlanner',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -64,10 +61,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             const Text(
               'Olá, Camila 👋',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
             ),
 
             const SizedBox(height: 20),
@@ -176,11 +170,57 @@ class _HomePageState extends State<HomePage> {
                 itemCount: workouts.length,
                 itemBuilder: (context, index) {
                   final workout = workouts[index];
+return Dismissible(
+  key: Key('$index-${workout.name}'),
 
-                  return WorkoutCard(
-                    title: workout.name,
-                    duration: workout.duration,
-                  );
+  direction: DismissDirection.endToStart,
+
+  confirmDismiss: (direction) async {
+    return await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir treino'),
+        content: const Text('Tem certeza?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+  },
+
+  onDismissed: (direction) async {
+    final removedWorkout = workout;
+
+    setState(() {
+      workouts.removeAt(index);
+    });
+
+    await StorageService.saveWorkouts(workouts);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${removedWorkout.name} removido')),
+    );
+  },
+
+  background: Container(
+    alignment: Alignment.centerRight,
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    color: Colors.red,
+    child: const Icon(Icons.delete, color: Colors.white),
+  ),
+
+  child: WorkoutCard(
+    title: workout.name,
+    duration: workout.duration,
+  ),
+);
                 },
               ),
             ),
