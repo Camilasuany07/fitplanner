@@ -4,7 +4,6 @@ import '../../workout/widgets/workout_card.dart';
 import '../../workout/widgets/progress_chart.dart';
 import '../../workout/pages/add_workout_page.dart';
 import '../../workout/services/storage_service.dart';
-import '../../workout/pages/workout_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
