@@ -9,11 +9,13 @@ class StorageService {
   static Future<void> saveWorkouts(List<Workout> workouts) async {
     final prefs = await SharedPreferences.getInstance();
 
-    List<String> data =
-        workouts.map((w) => jsonEncode(w.toMap())).toList();
+    final List<String> data = workouts
+        .map((w) => jsonEncode(w.toMap()))
+        .toList();
 
     await prefs.setStringList(key, data);
   }
+
 
   // CARREGAR
   static Future<List<Workout>> loadWorkouts() async {

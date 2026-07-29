@@ -4,6 +4,7 @@ import '../../workout/widgets/workout_card.dart';
 import '../../workout/widgets/progress_chart.dart';
 import '../../workout/pages/add_workout_page.dart';
 import '../../workout/services/storage_service.dart';
+import '../../workout/pages/edit_workout_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -40,13 +41,13 @@ class _HomePageState extends State<HomePage> {
 
           await loadData();
         },
-        backgroundColor: const Color.fromARGB(255, 0, 0, 0),
+        backgroundColor: const Color.fromARGB(255, 54, 41, 158),
         child: const Icon(Icons.add),
       ),
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color.fromARGB(255, 245, 245, 246),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color.fromARGB(195, 0, 0, 0),
+        backgroundColor: const Color.fromARGB(255, 23, 18, 61),
         title: const Text(
           'FitPlanner',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -71,8 +72,8 @@ class _HomePageState extends State<HomePage> {
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [
-                    Color.fromARGB(255, 2, 148, 63),
-                    Color.fromARGB(255, 112, 240, 32),
+                    Color.fromARGB(255, 57, 46, 209),
+                    Color.fromARGB(255, 43, 41, 112),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
@@ -130,7 +131,7 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
+                  backgroundColor: Color.fromARGB(255, 23, 18, 61),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -138,7 +139,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 child: const Text(
                   'Iniciar treino',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
             ),
@@ -159,67 +160,95 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 10),
 
-            ProgressChart(workouts: workouts),
+            SizedBox(
+              height: 160, // 👈 controla o tamanho
+              child: ProgressChart(workouts: workouts),
+            ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
 
             // 🔥 LISTA
             Expanded(
               child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 80),
                 itemCount: workouts.length,
                 itemBuilder: (context, index) {
                   final workout = workouts[index];
-return Dismissible(
-  key: Key('$index-${workout.name}'),
+                  return Dismissible(
+                    key: Key('$index-${workout.name}'),
 
-  direction: DismissDirection.endToStart,
+                    direction: DismissDirection.endToStart,
 
-  confirmDismiss: (direction) async {
-    return await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir treino'),
-        content: const Text('Tem certeza?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir'),
-          ),
-        ],
-      ),
-    );
-  },
+                    confirmDismiss: (direction) async {
+                      return await showDialog(
+                        context: context,
+                        builder:
+                            (context) => AlertDialog(
+                              title: const Text('Excluir treino'),
+                              content: const Text('Tem certeza?'),
+                              actions: [
+                                TextButton(
+                                  onPressed:
+                                      () => Navigator.pop(context, false),
+                                  child: const Text('Cancelar'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text('Excluir'),
+                                ),
+                              ],
+                            ),
+                      );
+                    },
 
-  onDismissed: (direction) async {
-    final removedWorkout = workout;
+                    onDismissed: (direction) async {
+                      final removedWorkout = workout;
 
-    setState(() {
-      workouts.removeAt(index);
-    });
+                      setState(() {
+                        workouts.removeAt(index);
+                      });
 
-    await StorageService.saveWorkouts(workouts);
+                      await StorageService.saveWorkouts(workouts);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${removedWorkout.name} removido')),
-    );
-  },
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${removedWorkout.name} removido'),
+                        ),
+                      );
+                    },
 
-  background: Container(
-    alignment: Alignment.centerRight,
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    color: Colors.red,
-    child: const Icon(Icons.delete, color: Colors.white),
-  ),
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      color: Colors.red,
+                      child: const Icon(Icons.delete, color: Colors.white),
+                    ),
+                    child: WorkoutCard(
+                      title: workout.name,
+                      duration: workout.duration,
 
-  child: WorkoutCard(
-    title: workout.name,
-    duration: workout.duration,
-  ),
-);
+                      // 👉 clique no card inteiro
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Abrindo ${workout.name}')),
+                        );
+                      },
+
+                      // 👉 botão de editar ✏️
+                      onEdit: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => EditWorkoutPage(
+                                  workout: workout,
+                                  index: index,
+                                ),
+                          ),
+                        ).then((_) => loadData());
+                      },
+                    ),
+                  );
                 },
               ),
             ),
