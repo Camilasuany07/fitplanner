@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
       title: 'FitPlanner',
       debugShowCheckedModeBanner: false, // 👈 remove faixa debug
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 27, 40, 160)),
         useMaterial3: true,
       ),
       home: const HomePage(),

@@ -1,5 +1,3 @@
-
-
 class Workout {
   final String name;
   final String duration;
@@ -26,10 +24,10 @@ class Workout {
   // 🔥 criar a partir do Map
   factory Workout.fromMap(Map<String, dynamic> map) {
     return Workout(
-      name: map['name'],
-      duration: map['duration'],
-      calories: map['calories'],
-      exercises: List<String>.from(map['exercises']),
+      name: map['name'] ?? '',
+      duration: map['duration'] ?? '',
+      calories: map['calories'] ?? 0,
+      exercises: List<String>.from(map['exercises'] ?? []),
     );
   }
 }

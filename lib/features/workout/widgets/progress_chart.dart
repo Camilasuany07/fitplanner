@@ -5,11 +5,17 @@ import '../models/workout_model.dart';
 class ProgressChart extends StatelessWidget {
   final List<Workout> workouts;
 
- ProgressChart({super.key, required this.workouts});
+  ProgressChart({super.key, required this.workouts});
 
   // Lista dos dias
   final List<String> weekDays = [
-    'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'
+    'Seg',
+    'Ter',
+    'Qua',
+    'Qui',
+    'Sex',
+    'Sáb',
+    'Dom',
   ];
 
   @override
@@ -19,57 +25,47 @@ class ProgressChart extends StatelessWidget {
       child: LineChart(
         LineChartData(
           gridData: FlGridData(show: false),
-          borderData: FlBorderData(show: false),
 
-          // 👇 CONFIGURAÇÃO DOS TÍTULOS
           titlesData: FlTitlesData(
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                interval: 1,
                 getTitlesWidget: (value, meta) {
-                  int index = value.toInt();
-
-                  if (index >= 0 && index < weekDays.length) {
-                    return Text(
-                      weekDays[index],
-                      style: const TextStyle(fontSize: 12),
-                    );
-                  }
-
-                  return const Text('');
+                  const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];
+                  return Text(
+                    days[value.toInt()],
+                    style: const TextStyle(fontSize: 10),
+                  );
                 },
               ),
             ),
-
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: true),
-            ),
-
-            topTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-
-            rightTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
           ),
+
+          borderData: FlBorderData(show: false),
 
           lineBarsData: [
             LineChartBarData(
-              isCurved: true,
-              spots: workouts.asMap().entries.map((entry) {
-                int index = entry.key;
-                final workout = entry.value;
+              isCurved: true, // 🔥 LINHA SUAVE
+              barWidth: 3,
+              color: const Color.fromARGB(255, 0, 170, 200),
 
-                return FlSpot(
-                  index.toDouble(),
-                  workout.calories.toDouble(),
-                );
-              }).toList(),
-              barWidth: 4,
-              isStrokeCapRound: true,
-              dotData: FlDotData(show: true),
+              dotData: FlDotData(show: true), // 🔥 PONTOS
+
+              belowBarData: BarAreaData(
+                show: true,
+                color: const Color.fromARGB(255, 3, 16, 112).withValues(alpha: 0.5),
+              ),
+
+              spots: [
+                FlSpot(0, 2),
+                FlSpot(1, 1),
+                FlSpot(2, 4),
+                FlSpot(3, 1),
+                FlSpot(4, 0),
+              ],
             ),
           ],
         ),
