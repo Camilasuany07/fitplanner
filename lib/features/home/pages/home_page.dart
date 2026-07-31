@@ -5,6 +5,7 @@ import '../../workout/widgets/progress_chart.dart';
 import '../../workout/pages/add_workout_page.dart';
 import '../../workout/services/storage_service.dart';
 import '../../workout/pages/edit_workout_page.dart';
+import '../../workout/models/workout_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,10 +30,25 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  List<Workout> todayWorkouts() {
+    final now = DateTime.now();
+
+    return workouts.where((w) {
+      return w.date.day == now.day &&
+          w.date.month == now.month &&
+          w.date.year == now.year;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final todayList = todayWorkouts(); // ✅ CORREÇÃO
+
     return Scaffold(
       floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF6366F1),
+        elevation: 6,
+        child: const Icon(Icons.add, size: 28),
         onPressed: () async {
           await Navigator.push(
             context,
@@ -41,8 +57,6 @@ class _HomePageState extends State<HomePage> {
 
           await loadData();
         },
-        backgroundColor: const Color.fromARGB(255, 54, 41, 158),
-        child: const Icon(Icons.add),
       ),
       backgroundColor: const Color.fromARGB(255, 245, 245, 246),
       appBar: AppBar(
@@ -66,7 +80,7 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 20),
 
-            // 🔥 CARD DINÂMICO
+            // 🔥 CARD
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -90,7 +104,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${workouts.length}',
+                        '${todayList.length}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 28,
@@ -107,7 +121,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${workouts.fold(0, (sum, w) => sum + w.calories)} kcal',
+                        '${todayList.fold<int>(0, (sum, w) => sum + w.calories)} kcal',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -122,28 +136,42 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 20),
 
             // BOTÃO
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Treino iniciado 💪')),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color.fromARGB(255, 23, 18, 61),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text(
-                  'Iniciar treino',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ),
+          Container(
+  width: double.infinity,
+  decoration: BoxDecoration(
+    gradient: const LinearGradient(
+      colors: [
+        Color.fromARGB(255, 64, 66, 219),
+        Color.fromARGB(255, 71, 6, 221),
+      ],
+    ),
+    borderRadius: BorderRadius.circular(16),
+  ),
+  child: Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Treino iniciado 💪')),
+        );
+      },
+      child: const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: Text(
+            'Iniciar treino',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
             ),
-
+          ),
+        ),
+      ),
+    ),
+  ),
+),
             const SizedBox(height: 20),
 
             const Text(
@@ -161,8 +189,8 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 10),
 
             SizedBox(
-              height: 160, // 👈 controla o tamanho
-              child: ProgressChart(workouts: workouts),
+              height: 160,
+              child: ProgressChart(workouts: todayList), // ✅ CORREÇÃO
             ),
 
             const SizedBox(height: 20),
@@ -170,34 +198,34 @@ class _HomePageState extends State<HomePage> {
             // 🔥 LISTA
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: 80),
-                itemCount: workouts.length,
+                padding: const EdgeInsets.only(bottom: 100),
+                itemCount: todayList.length,
                 itemBuilder: (context, index) {
-                  final workout = workouts[index];
+                  final workout = todayList[index];
+
                   return Dismissible(
                     key: Key('$index-${workout.name}'),
-
                     direction: DismissDirection.endToStart,
 
                     confirmDismiss: (direction) async {
                       return await showDialog(
                         context: context,
-                        builder:
-                            (context) => AlertDialog(
-                              title: const Text('Excluir treino'),
-                              content: const Text('Tem certeza?'),
-                              actions: [
-                                TextButton(
-                                  onPressed:
-                                      () => Navigator.pop(context, false),
-                                  child: const Text('Cancelar'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  child: const Text('Excluir'),
-                                ),
-                              ],
+                        builder: (context) => AlertDialog(
+                          title: const Text('Excluir treino'),
+                          content: const Text('Tem certeza?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.pop(context, false),
+                              child: const Text('Cancelar'),
                             ),
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.pop(context, true),
+                              child: const Text('Excluir'),
+                            ),
+                          ],
+                        ),
                       );
                     },
 
@@ -205,7 +233,7 @@ class _HomePageState extends State<HomePage> {
                       final removedWorkout = workout;
 
                       setState(() {
-                        workouts.removeAt(index);
+                        workouts.remove(workout); // ✅ CORREÇÃO IMPORTANTE
                       });
 
                       await StorageService.saveWorkouts(workouts);
@@ -223,27 +251,26 @@ class _HomePageState extends State<HomePage> {
                       color: Colors.red,
                       child: const Icon(Icons.delete, color: Colors.white),
                     ),
+
                     child: WorkoutCard(
                       title: workout.name,
                       duration: workout.duration,
+                      date: workout.date,
 
-                      // 👉 clique no card inteiro
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Abrindo ${workout.name}')),
                         );
                       },
 
-                      // 👉 botão de editar ✏️
                       onEdit: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder:
-                                (_) => EditWorkoutPage(
-                                  workout: workout,
-                                  index: index,
-                                ),
+                            builder: (_) => EditWorkoutPage(
+                              workout: workout,
+                              index: index,
+                            ),
                           ),
                         ).then((_) => loadData());
                       },

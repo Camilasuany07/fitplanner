@@ -15,18 +15,19 @@ class _AddWorkoutPageState extends State<AddWorkoutPage> {
   final durationController = TextEditingController();
   final caloriesController = TextEditingController();
 
-   Future<void> saveWorkout() async {
+  Future<void> saveWorkout() async {
     final newWorkout = Workout(
       name: nameController.text,
       duration: durationController.text,
       calories: int.tryParse(caloriesController.text) ?? 0,
       exercises: [],
+      date: DateTime.now(), // 👈 aqui
     );
 
     workouts.add(newWorkout);
-    
+
     await StorageService.saveWorkouts(workouts);
-    
+
     Navigator.pop(context);
   }
 
@@ -52,10 +53,7 @@ class _AddWorkoutPageState extends State<AddWorkoutPage> {
               decoration: const InputDecoration(labelText: 'Calorias'),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: saveWorkout,
-              child: const Text('Salvar'),
-            )
+            ElevatedButton(onPressed: saveWorkout, child: const Text('Salvar')),
           ],
         ),
       ),

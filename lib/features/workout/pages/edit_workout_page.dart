@@ -37,7 +37,8 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
       name: nameController.text,
       duration: durationController.text,
       calories: int.tryParse(caloriesController.text) ?? 0,
-       exercises: widget.workout.exercises,
+      exercises: widget.workout.exercises,
+      date: widget.workout.date,
     );
 
     setState(() {

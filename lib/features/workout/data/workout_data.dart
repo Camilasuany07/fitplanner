@@ -10,6 +10,7 @@ final List<Workout> workouts = [
       'Crucifixo',
       'Tríceps corda',
     ],
+    date: DateTime.now(),
   ),
   Workout(
     name: 'Cardio',
@@ -19,5 +20,6 @@ final List<Workout> workouts = [
       'Esteira',
       'Bike',
     ],
+    date: DateTime.now(),
   ),
 ];

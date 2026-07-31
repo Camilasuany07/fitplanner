@@ -3,31 +3,35 @@ class Workout {
   final String duration;
   final int calories;
   final List<String> exercises;
+  final DateTime date;
 
   Workout({
     required this.name,
     required this.duration,
     required this.calories,
     required this.exercises,
+    required this.date,
   });
 
-  // 🔥 converter para Map
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'duration': duration,
       'calories': calories,
       'exercises': exercises,
+      'date': date.toIso8601String(),
     };
   }
 
-  // 🔥 criar a partir do Map
   factory Workout.fromMap(Map<String, dynamic> map) {
     return Workout(
       name: map['name'] ?? '',
       duration: map['duration'] ?? '',
       calories: map['calories'] ?? 0,
       exercises: List<String>.from(map['exercises'] ?? []),
+      date: DateTime.parse(
+        map['date'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 }
