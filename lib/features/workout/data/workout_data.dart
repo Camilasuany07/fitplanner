@@ -5,21 +5,14 @@ final List<Workout> workouts = [
     name: 'Peito e Tríceps',
     duration: '45 min',
     calories: 320,
-    exercises: [
-      'Supino reto',
-      'Crucifixo',
-      'Tríceps corda',
-    ],
+    exercises: ['Supino reto', 'Crucifixo', 'Tríceps corda'],
     date: DateTime.now(),
   ),
   Workout(
     name: 'Cardio',
     duration: '30 min',
     calories: 200,
-    exercises: [
-      'Esteira',
-      'Bike',
-    ],
+    exercises: ['Esteira', 'Bike'],
     date: DateTime.now(),
   ),
 ];

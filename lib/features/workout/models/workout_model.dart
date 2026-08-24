@@ -29,9 +29,7 @@ class Workout {
       duration: map['duration'] ?? '',
       calories: map['calories'] ?? 0,
       exercises: List<String>.from(map['exercises'] ?? []),
-      date: DateTime.parse(
-        map['date'] ?? DateTime.now().toIso8601String(),
-      ),
+      date: DateTime.parse(map['date'] ?? DateTime.now().toIso8601String()),
     );
   }
 }

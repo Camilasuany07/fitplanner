@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 class WorkoutPage extends StatefulWidget {
   final String title;
   final String duration;
+  final List<String> exercises;
 
   const WorkoutPage({
     super.key,
     required this.title,
     required this.duration,
+    required this.exercises,
   });
 
   @override
@@ -48,28 +50,25 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
     _timer?.cancel();
 
-    _timer = Timer.periodic(
-      const Duration(seconds: 1),
-      (timer) {
-        if (_remainingSeconds <= 1) {
-          timer.cancel();
-
-          setState(() {
-            _remainingSeconds = 0;
-            _isRunning = false;
-            _isFinished = true;
-          });
-
-          _showFinishedMessage();
-
-          return;
-        }
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSeconds <= 1) {
+        timer.cancel();
 
         setState(() {
-          _remainingSeconds--;
+          _remainingSeconds = 0;
+          _isRunning = false;
+          _isFinished = true;
         });
-      },
-    );
+
+        _showFinishedMessage();
+
+        return;
+      }
+
+      setState(() {
+        _remainingSeconds--;
+      });
+    });
   }
 
   void _pauseWorkout() {
@@ -92,11 +91,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
   }
 
   void _showFinishedMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Treino concluído! 💪🔥'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Treino concluído! 💪🔥')));
   }
 
   void _resetWorkout() {
@@ -131,9 +128,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF17123D),
         elevation: 0,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
           widget.title,
           style: const TextStyle(
@@ -162,10 +157,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
             const Text(
               'Detalhes do treino',
-              style: TextStyle(
-                color: Colors.white60,
-                fontSize: 15,
-              ),
+              style: TextStyle(color: Colors.white60, fontSize: 15),
             ),
 
             const SizedBox(height: 24),
@@ -175,10 +167,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF392ED1),
-                    Color(0xFF2B2970),
-                  ],
+                  colors: [Color(0xFF392ED1), Color(0xFF2B2970)],
                 ),
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -193,19 +182,16 @@ class _WorkoutPageState extends State<WorkoutPage> {
                     ),
                   ),
 
-                  Container(
-                    width: 1,
-                    height: 45,
-                    color: Colors.white24,
-                  ),
+                  Container(width: 1, height: 45, color: Colors.white24),
 
                   Expanded(
                     child: _InfoItem(
                       icon: Icons.fitness_center,
                       label: 'Treino',
-                      value: _isFinished
-                          ? 'Concluído'
-                          : _isRunning
+                      value:
+                          _isFinished
+                              ? 'Concluído'
+                              : _isRunning
                               ? 'Em andamento'
                               : 'Ativo',
                     ),
@@ -219,10 +205,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
             // CRONÔMETRO
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                vertical: 30,
-                horizontal: 20,
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
               decoration: BoxDecoration(
                 color: const Color(0xFF1C1C2E),
                 borderRadius: BorderRadius.circular(20),
@@ -232,10 +215,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 children: [
                   const Text(
                     'Tempo restante',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 15),
                   ),
 
                   const SizedBox(height: 10),
@@ -255,12 +235,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
                     _isFinished
                         ? 'Treino concluído! 🎉'
                         : _isRunning
-                            ? 'Treino em andamento 💪'
-                            : 'Pronto para começar',
-                    style: const TextStyle(
-                      color: Colors.white60,
-                      fontSize: 14,
-                    ),
+                        ? 'Treino em andamento 💪'
+                        : 'Pronto para começar',
+                    style: const TextStyle(color: Colors.white60, fontSize: 14),
                   ),
                 ],
               ),
@@ -280,46 +257,105 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
             const SizedBox(height: 12),
 
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1C1C2E),
-                borderRadius: BorderRadius.circular(16),
-              ),
-
-              child: const Column(
-                children: [
-                  Icon(
-                    Icons.fitness_center,
-                    color: Color(0xFF6366F1),
-                    size: 40,
-                  ),
-
-                  SizedBox(height: 12),
-
-                  Text(
-                    'Nenhum exercício cadastrado',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+            if (widget.exercises.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1C1C2E),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Column(
+                  children: [
+                    Icon(
+                      Icons.fitness_center,
+                      color: Color(0xFF6366F1),
+                      size: 40,
                     ),
-                  ),
 
-                  SizedBox(height: 6),
+                    SizedBox(height: 12),
 
-                  Text(
-                    'Em breve você poderá adicionar exercícios a este treino.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 14,
+                    Text(
+                      'Nenhum exercício cadastrado',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+
+                    SizedBox(height: 6),
+
+                    Text(
+                      'Em breve você poderá adicionar exercícios a este treino.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white60, fontSize: 14),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Column(
+                children: List.generate(widget.exercises.length, (index) {
+                  final exercise = widget.exercises[index];
+
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1C1C2E),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF6366F1,
+                            ).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.fitness_center,
+                            color: Color(0xFF6366F1),
+                          ),
+                        ),
+
+                        const SizedBox(width: 14),
+
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                exercise,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+
+                              const SizedBox(height: 4),
+
+                              Text(
+                                'Exercício ${index + 1}',
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
               ),
-            ),
 
             const SizedBox(height: 30),
 
@@ -330,10 +366,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 child: ElevatedButton.icon(
                   onPressed: _startWorkout,
 
-                  icon: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
-                  ),
+                  icon: const Icon(Icons.play_arrow, color: Colors.white),
 
                   label: const Text(
                     'Iniciar treino',
@@ -346,9 +379,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6366F1),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 17,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 17),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -363,10 +394,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                     child: ElevatedButton.icon(
                       onPressed: _pauseWorkout,
 
-                      icon: const Icon(
-                        Icons.pause,
-                        color: Colors.white,
-                      ),
+                      icon: const Icon(Icons.pause, color: Colors.white),
 
                       label: const Text(
                         'Pausar',
@@ -378,9 +406,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6366F1),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 17,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 17),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -394,10 +420,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                     child: ElevatedButton.icon(
                       onPressed: _finishWorkout,
 
-                      icon: const Icon(
-                        Icons.stop,
-                        color: Colors.white,
-                      ),
+                      icon: const Icon(Icons.stop, color: Colors.white),
 
                       label: const Text(
                         'Finalizar',
@@ -409,9 +432,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.redAccent,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 17,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 17),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -427,10 +448,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 child: ElevatedButton.icon(
                   onPressed: _resetWorkout,
 
-                  icon: const Icon(
-                    Icons.refresh,
-                    color: Colors.white,
-                  ),
+                  icon: const Icon(Icons.refresh, color: Colors.white),
 
                   label: const Text(
                     'Treinar novamente',
@@ -443,9 +461,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6366F1),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 17,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 17),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -458,7 +474,6 @@ class _WorkoutPageState extends State<WorkoutPage> {
     );
   }
 }
-
 
 // WIDGET PARA AS INFORMAÇÕES DO TREINO
 class _InfoItem extends StatelessWidget {
@@ -476,20 +491,13 @@ class _InfoItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(
-          icon,
-          color: Colors.white,
-          size: 28,
-        ),
+        Icon(icon, color: Colors.white, size: 28),
 
         const SizedBox(height: 8),
 
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 13,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
         ),
 
         const SizedBox(height: 4),

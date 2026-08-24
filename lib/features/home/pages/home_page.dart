@@ -190,6 +190,7 @@ class _HomePageState extends State<HomePage> {
                                 (_) => WorkoutPage(
                                   title: workout.name,
                                   duration: workout.duration,
+                                  exercises: workout.exercises,
                                 ),
                           ),
                         );
@@ -362,6 +363,7 @@ class _HomePageState extends State<HomePage> {
                                 (_) => WorkoutPage(
                                   title: workout.name,
                                   duration: workout.duration,
+                                  exercises: workout.exercises,
                                 ),
                           ),
                         );
@@ -374,7 +376,7 @@ class _HomePageState extends State<HomePage> {
                             builder:
                                 (_) => EditWorkoutPage(
                                   workout: workout,
-                                  index: index,
+                                  index: workouts.indexOf(workout),
                                 ),
                           ),
                         ).then((_) => loadData());
