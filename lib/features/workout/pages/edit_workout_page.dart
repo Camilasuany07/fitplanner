@@ -512,7 +512,7 @@ class _EditExerciseDialogState extends State<_EditExerciseDialog> {
         textInputAction: TextInputAction.done,
         decoration: const InputDecoration(hintText: 'Nome do exercício'),
         onChanged: (newValue) => value = newValue,
-        onSubmitted: (_) => save(),
+        onFieldSubmitted: (_) => save(),
       ),
       actions: [
         TextButton(
