@@ -1,8 +1,10 @@
+import 'workout_exercise_model.dart';
+
 class Workout {
   final String name;
   final String duration;
   final int calories;
-  final List<String> exercises;
+  final List<WorkoutExercise> exercises;
   final DateTime date;
 
   Workout({
@@ -18,7 +20,9 @@ class Workout {
       'name': name,
       'duration': duration,
       'calories': calories,
-      'exercises': exercises,
+      'exercises': exercises
+          .map((exercise) => exercise.toMap())
+          .toList(),
       'date': date.toIso8601String(),
     };
   }
@@ -28,8 +32,30 @@ class Workout {
       name: map['name'] ?? '',
       duration: map['duration'] ?? '',
       calories: map['calories'] ?? 0,
-      exercises: List<String>.from(map['exercises'] ?? []),
-      date: DateTime.parse(map['date'] ?? DateTime.now().toIso8601String()),
+      exercises: (map['exercises'] as List<dynamic>? ?? []).map((exercise) {
+        if (exercise is String) {
+          return WorkoutExercise(
+            exercise: exercise,
+            sets: 0,
+            repetitions: 0,
+          );
+        }
+
+        if (exercise is Map) {
+          return WorkoutExercise.fromMap(
+            Map<String, dynamic>.from(exercise),
+          );
+        }
+
+        return WorkoutExercise(
+          exercise: exercise.toString(),
+          sets: 0,
+          repetitions: 0,
+        );
+      }).toList(),
+      date: DateTime.parse(
+        map['date'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 }

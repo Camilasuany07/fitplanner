@@ -25,8 +25,22 @@ class StorageService {
 
     if (data == null) return [];
 
-    return data
-        .map((item) => Workout.fromMap(jsonDecode(item)))
-        .toList();
+    return data.map((item) {
+      try {
+        dynamic decoded = jsonDecode(item);
+
+        if (decoded is String) {
+          decoded = jsonDecode(decoded);
+        }
+
+        if (decoded is! Map) return null;
+
+        return Workout.fromMap(Map<String, dynamic>.from(decoded));
+      } on FormatException {
+        return null;
+      } on TypeError {
+        return null;
+      }
+    }).whereType<Workout>().toList();
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/workout_model.dart';
+import '../models/workout_exercise_model.dart';
 import '../data/workout_data.dart';
-import '../../workout/services/storage_service.dart';
+import '../services/storage_service.dart';
+
 
 class AddWorkoutPage extends StatefulWidget {
   const AddWorkoutPage({super.key});
@@ -14,8 +16,7 @@ class _AddWorkoutPageState extends State<AddWorkoutPage> {
   final nameController = TextEditingController();
   final durationController = TextEditingController();
   final caloriesController = TextEditingController();
-  final exerciseController = TextEditingController();
-  final List<String> exercises = [];
+  final List<WorkoutExercise> exercises = [];
 
   @override
   void dispose() {
@@ -26,43 +27,70 @@ class _AddWorkoutPageState extends State<AddWorkoutPage> {
   }
 
   Future<void> addExercise() async {
-    exerciseController.clear();
+    final exerciseController = TextEditingController();
+    final setsController = TextEditingController();
+    final repetitionsController = TextEditingController();
 
-    final result = await showDialog<bool>(
+    final result = await showDialog<WorkoutExercise>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text("Adicionar exercício"),
-          content: TextField(
-            controller: exerciseController,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: "Ex: Agachamento"),
+          title: const Text('Adicionar exercício'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: exerciseController,
+                autofocus: true,
+                decoration: const InputDecoration(hintText: 'Ex: Agachamento'),
+              ),
+              TextField(
+                controller: setsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Séries'),
+              ),
+              TextField(
+                controller: repetitionsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Repetições'),
+              ),
+            ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text("Cancelar"),
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text("Adicionar"),
+              onPressed: () {
+                final exercise = exerciseController.text.trim();
+                if (exercise.isEmpty) return;
+
+                Navigator.pop(
+                  dialogContext,
+                  WorkoutExercise(
+                    exercise: exercise,
+                    sets: int.tryParse(setsController.text) ?? 0,
+                    repetitions: int.tryParse(repetitionsController.text) ?? 0,
+                  ),
+                );
+              },
+              child: const Text('Adicionar'),
             ),
           ],
         );
       },
     );
 
-    if (result == true) {
-      final exercise = exerciseController.text.trim();
+    exerciseController.dispose();
+    setsController.dispose();
+    repetitionsController.dispose();
 
-      if (exercise.isNotEmpty) {
-        setState(() {
-          exercises.add(exercise);
-        });
-      }
+    if (result != null) {
+      setState(() {
+        exercises.add(result);
+      });
     }
-
-    exerciseController.clear();
   }
 
   void removeExercise(int index) {
@@ -94,7 +122,7 @@ class _AddWorkoutPageState extends State<AddWorkoutPage> {
       name: name,
       duration: duration,
       calories: int.tryParse(caloriesText) ?? 0,
-      exercises: List<String>.from(exercises),
+      exercises: exercises,
       date: DateTime.now(),
     );
 
@@ -291,14 +319,14 @@ class _AddWorkoutPageState extends State<AddWorkoutPage> {
                         ),
                       ),
                       title: Text(
-                        exercise,
+                        exercise.exercise,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       subtitle: Text(
-                        'Exercício ${index + 1}',
+                        '${exercise.sets} séries • ${exercise.repetitions} repetições',
                         style: const TextStyle(color: Colors.white54),
                       ),
                       trailing: IconButton(

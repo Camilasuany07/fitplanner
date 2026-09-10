@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/workout_model.dart';
+import '../models/workout_exercise_model.dart';
 import '../services/storage_service.dart';
 import '../data/workout_data.dart';
 
@@ -21,9 +22,7 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
   late TextEditingController nameController;
   late TextEditingController durationController;
   late TextEditingController caloriesController;
-  late TextEditingController exerciseController;
-
-  late List<String> exercises;
+  late List<WorkoutExercise> exercises;
   bool isSaving = false;
 
   @override
@@ -38,9 +37,7 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
       text: widget.workout.calories.toString(),
     );
 
-    exerciseController = TextEditingController();
-
-    exercises = List<String>.from(widget.workout.exercises);
+    exercises = List<WorkoutExercise>.from(widget.workout.exercises);
   }
 
   @override
@@ -48,33 +45,59 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
     nameController.dispose();
     durationController.dispose();
     caloriesController.dispose();
-    exerciseController.dispose();
     super.dispose();
   }
 
   Future<void> addExercise() async {
-    exerciseController.clear();
+    final exerciseController = TextEditingController();
+    final setsController = TextEditingController();
+    final repetitionsController = TextEditingController();
 
-    final result = await showDialog<bool>(
+    final result = await showDialog<WorkoutExercise>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Adicionar exercício'),
-          content: TextField(
-            controller: exerciseController,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: 'Ex: Agachamento'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: exerciseController,
+                autofocus: true,
+                decoration: const InputDecoration(hintText: 'Ex: Agachamento'),
+              ),
+              TextField(
+                controller: setsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Séries'),
+              ),
+              TextField(
+                controller: repetitionsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Repetições'),
+              ),
+            ],
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext, false);
+                Navigator.pop(dialogContext);
               },
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(dialogContext, true);
+                final exercise = exerciseController.text.trim();
+                if (exercise.isEmpty) return;
+
+                Navigator.pop(
+                  dialogContext,
+                  WorkoutExercise(
+                    exercise: exercise,
+                    sets: int.tryParse(setsController.text) ?? 0,
+                    repetitions: int.tryParse(repetitionsController.text) ?? 0,
+                  ),
+                );
               },
               child: const Text('Adicionar'),
             ),
@@ -83,23 +106,21 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
       },
     );
 
-    if (result == true) {
-      final exercise = exerciseController.text.trim();
+    exerciseController.dispose();
+    setsController.dispose();
+    repetitionsController.dispose();
 
-      if (exercise.isNotEmpty) {
-        setState(() {
-          exercises.add(exercise);
-        });
-      }
+    if (result != null) {
+      setState(() {
+        exercises.add(result);
+      });
     }
-
-    exerciseController.clear();
   }
 
   Future<void> editExercise(int index) async {
     if (index < 0 || index >= exercises.length) return;
 
-    final result = await showDialog<String>(
+    final result = await showDialog<WorkoutExercise>(
       context: context,
       builder: (dialogContext) {
         return _EditExerciseDialog(
@@ -110,7 +131,7 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
 
     if (!mounted) return;
 
-    if (result != null && result.isNotEmpty && index < exercises.length) {
+    if (result != null && index < exercises.length) {
       setState(() {
         exercises[index] = result;
       });
@@ -148,7 +169,7 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
       name: name,
       duration: duration,
       calories: int.tryParse(caloriesText) ?? 0,
-      exercises: List<String>.from(exercises),
+      exercises: exercises,
       date: widget.workout.date,
     );
 
@@ -375,7 +396,7 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
                       ),
 
                       title: Text(
-                        exercise,
+                        exercise.exercise,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -383,7 +404,7 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
                       ),
 
                       subtitle: Text(
-                        'Exercício ${index + 1}',
+                        '${exercise.sets} séries • ${exercise.repetitions} repetições',
                         style: const TextStyle(color: Colors.white54),
                       ),
 
@@ -478,7 +499,7 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
 }
 
 class _EditExerciseDialog extends StatefulWidget {
-  final String initialValue;
+  final WorkoutExercise initialValue;
 
   const _EditExerciseDialog({required this.initialValue});
 
@@ -487,18 +508,44 @@ class _EditExerciseDialog extends StatefulWidget {
 }
 
 class _EditExerciseDialogState extends State<_EditExerciseDialog> {
-  late String value;
+  late final TextEditingController exerciseController;
+  late final TextEditingController setsController;
+  late final TextEditingController repetitionsController;
 
   @override
   void initState() {
     super.initState();
-    value = widget.initialValue;
+    exerciseController = TextEditingController(
+      text: widget.initialValue.exercise,
+    );
+    setsController = TextEditingController(
+      text: widget.initialValue.sets.toString(),
+    );
+    repetitionsController = TextEditingController(
+      text: widget.initialValue.repetitions.toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    exerciseController.dispose();
+    setsController.dispose();
+    repetitionsController.dispose();
+    super.dispose();
   }
 
   void save() {
-    final exercise = value.trim();
+    final exercise = exerciseController.text.trim();
     if (exercise.isNotEmpty) {
-      Navigator.pop(context, exercise);
+      Navigator.pop(
+        context,
+        WorkoutExercise(
+          exercise: exercise,
+          sets: int.tryParse(setsController.text) ?? 0,
+          repetitions: int.tryParse(repetitionsController.text) ?? 0,
+          weight: widget.initialValue.weight,
+        ),
+      );
     }
   }
 
@@ -506,13 +553,27 @@ class _EditExerciseDialogState extends State<_EditExerciseDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Editar exercício'),
-      content: TextFormField(
-        initialValue: widget.initialValue,
-        autofocus: true,
-        textInputAction: TextInputAction.done,
-        decoration: const InputDecoration(hintText: 'Nome do exercício'),
-        onChanged: (newValue) => value = newValue,
-        onFieldSubmitted: (_) => save(),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: exerciseController,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Nome do exercício'),
+          ),
+          TextField(
+            controller: setsController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Séries'),
+          ),
+          TextField(
+            controller: repetitionsController,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(labelText: 'Repetições'),
+            onSubmitted: (_) => save(),
+          ),
+        ],
       ),
       actions: [
         TextButton(

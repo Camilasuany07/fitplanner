@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../models/workout_exercise_model.dart';
 
 class WorkoutPage extends StatefulWidget {
   final String title;
   final String duration;
-  final List<String> exercises;
+  final List<WorkoutExercise> exercises;
 
   const WorkoutPage({
     super.key,
@@ -331,7 +332,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                exercise,
+                                exercise.exercise,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
@@ -342,7 +343,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                               const SizedBox(height: 4),
 
                               Text(
-                                'Exercício ${index + 1}',
+                                '${exercise.sets} séries • ${exercise.repetitions} repetições',
                                 style: const TextStyle(
                                   color: Colors.white54,
                                   fontSize: 13,
