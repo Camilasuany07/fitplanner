@@ -7,12 +7,14 @@ class WorkoutPage extends StatefulWidget {
   final String title;
   final String duration;
   final List<WorkoutExercise> exercises;
+  final Future<void> Function()? onCompleted;
 
   const WorkoutPage({
     super.key,
     required this.title,
     required this.duration,
     required this.exercises,
+    this.onCompleted,
   });
 
   @override
@@ -41,6 +43,11 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
   void _startWorkout() {
     if (_remainingSeconds <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Defina uma duração válida para iniciar o treino.'),
+        ),
+      );
       return;
     }
 
@@ -54,15 +61,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds <= 1) {
         timer.cancel();
-
-        setState(() {
-          _remainingSeconds = 0;
-          _isRunning = false;
-          _isFinished = true;
-        });
-
-        _showFinishedMessage();
-
+        unawaited(_completeWorkout());
         return;
       }
 
@@ -80,15 +79,32 @@ class _WorkoutPageState extends State<WorkoutPage> {
     });
   }
 
-  void _finishWorkout() {
+  Future<void> _finishWorkout() => _completeWorkout();
+
+  Future<void> _completeWorkout() async {
+    if (_isFinished) return;
+
     _timer?.cancel();
 
     setState(() {
+      _remainingSeconds = 0;
       _isRunning = false;
       _isFinished = true;
     });
 
-    _showFinishedMessage();
+    try {
+      await widget.onCompleted?.call();
+      if (mounted) _showFinishedMessage();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Treino concluído, mas não foi possível salvar o progresso.',
+          ),
+        ),
+      );
+    }
   }
 
   void _showFinishedMessage() {

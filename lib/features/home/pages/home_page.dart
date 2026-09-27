@@ -16,6 +16,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final List<DateTime> workoutCompletions = [];
+
   String getGreeting() {
     final hour = DateTime.now().hour;
 
@@ -32,13 +34,26 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> loadData() async {
     final savedWorkouts = await StorageService.loadWorkouts();
+    final savedCompletions = await StorageService.loadWorkoutCompletions();
 
     if (!mounted) return;
 
     setState(() {
       workouts.clear();
       workouts.addAll(savedWorkouts);
+      workoutCompletions
+        ..clear()
+        ..addAll(savedCompletions);
     });
+  }
+
+  Future<void> recordWorkoutCompletion() async {
+    final completedAt = DateTime.now();
+    await StorageService.recordWorkoutCompletion(completedAt);
+
+    if (!mounted) return;
+
+    setState(() => workoutCompletions.add(completedAt));
   }
 
   List<Workout> todayWorkouts() {
@@ -57,9 +72,14 @@ class _HomePageState extends State<HomePage> {
     final monday = today.subtract(Duration(days: today.weekday - 1));
     final nextMonday = monday.add(const Duration(days: 7));
 
-    return workouts.where((w) {
-      final workoutDay = DateTime(w.date.year, w.date.month, w.date.day);
-      return !workoutDay.isBefore(monday) && workoutDay.isBefore(nextMonday);
+    return workoutCompletions.where((completedAt) {
+      final completionDay = DateTime(
+        completedAt.year,
+        completedAt.month,
+        completedAt.day,
+      );
+      return !completionDay.isBefore(monday) &&
+          completionDay.isBefore(nextMonday);
     }).length;
   }
 
@@ -206,6 +226,7 @@ class _HomePageState extends State<HomePage> {
                                 title: workout.name,
                                 duration: workout.duration,
                                 exercises: workout.exercises,
+                                onCompleted: recordWorkoutCompletion,
                               ),
                         ),
                       );
@@ -289,7 +310,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 child: SizedBox(
                   height: 160,
-                  child: ProgressChart(workouts: workouts),
+                  child: ProgressChart(completions: workoutCompletions),
                 ),
               ),
 
@@ -429,6 +450,7 @@ class _HomePageState extends State<HomePage> {
                                     title: workout.name,
                                     duration: workout.duration,
                                     exercises: workout.exercises,
+                                    onCompleted: recordWorkoutCompletion,
                                   ),
                             ),
                           );

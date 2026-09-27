@@ -1,15 +1,15 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import '../models/workout_model.dart';
 
 class ProgressChart extends StatelessWidget {
-  const ProgressChart({super.key, required this.workouts});
+  const ProgressChart({super.key, required this.completions});
 
-  final List<Workout> workouts;
+  final List<DateTime> completions;
 
   static const _weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
-  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+  DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 
   @override
   Widget build(BuildContext context) {
@@ -17,9 +17,9 @@ class ProgressChart extends StatelessWidget {
     final monday = today.subtract(Duration(days: today.weekday - 1));
     final workoutsPerDay = List<int>.filled(7, 0);
 
-    for (final workout in workouts) {
-      final workoutDay = _dateOnly(workout.date);
-      final dayIndex = workoutDay.difference(monday).inDays;
+    for (final completion in completions) {
+      final completionDay = _dateOnly(completion);
+      final dayIndex = completionDay.difference(monday).inDays;
       if (dayIndex >= 0 && dayIndex < workoutsPerDay.length) {
         workoutsPerDay[dayIndex]++;
       }
@@ -38,8 +38,8 @@ class ProgressChart extends StatelessWidget {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: 1,
-          getDrawingHorizontalLine: (_) =>
-              const FlLine(color: Colors.white12, strokeWidth: 1),
+          getDrawingHorizontalLine:
+              (_) => const FlLine(color: Colors.white12, strokeWidth: 1),
         ),
         titlesData: FlTitlesData(
           leftTitles: const AxisTitles(
