@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../models/workout_exercise_model.dart';
+import '../models/workout_model.dart';
 
 class WorkoutPage extends StatefulWidget {
   final String title;
@@ -37,8 +38,13 @@ class _WorkoutPageState extends State<WorkoutPage> {
   }
 
   int _durationInSeconds() {
-    final minutes = int.tryParse(widget.duration) ?? 0;
+    final minutes = Workout.parseDurationMinutes(widget.duration) ?? 0;
     return minutes * 60;
+  }
+
+  String get _formattedDuration {
+    final minutes = Workout.parseDurationMinutes(widget.duration);
+    return minutes == null ? widget.duration : '$minutes min';
   }
 
   void _startWorkout() {
@@ -195,7 +201,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                     child: _InfoItem(
                       icon: Icons.timer_outlined,
                       label: 'Duração',
-                      value: widget.duration,
+                      value: _formattedDuration,
                     ),
                   ),
 

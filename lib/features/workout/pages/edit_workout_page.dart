@@ -31,7 +31,9 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
 
     nameController = TextEditingController(text: widget.workout.name);
 
-    durationController = TextEditingController(text: widget.workout.duration);
+    durationController = TextEditingController(
+      text: Workout.normalizeDuration(widget.workout.duration),
+    );
 
     caloriesController = TextEditingController(
       text: widget.workout.calories.toString(),
@@ -123,9 +125,7 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
     final result = await showDialog<WorkoutExercise>(
       context: context,
       builder: (dialogContext) {
-        return _EditExerciseDialog(
-          initialValue: exercises[index],
-        );
+        return _EditExerciseDialog(initialValue: exercises[index]);
       },
     );
 
@@ -149,6 +149,7 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
 
     final name = nameController.text.trim();
     final duration = durationController.text.trim();
+    final durationMinutes = Workout.parseDurationMinutes(duration);
     final caloriesText = caloriesController.text.trim();
 
     if (name.isEmpty) {
@@ -158,16 +159,16 @@ class _EditWorkoutPageState extends State<EditWorkoutPage> {
       return;
     }
 
-    if (duration.isEmpty) {
+    if (durationMinutes == null || durationMinutes <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Digite a duração do treino.')),
+        const SnackBar(content: Text('Digite uma duração válida em minutos.')),
       );
       return;
     }
 
     final updatedWorkout = Workout(
       name: name,
-      duration: duration,
+      duration: durationMinutes.toString(),
       calories: int.tryParse(caloriesText) ?? 0,
       exercises: exercises,
       date: widget.workout.date,
@@ -580,10 +581,7 @@ class _EditExerciseDialogState extends State<_EditExerciseDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
-        ElevatedButton(
-          onPressed: save,
-          child: const Text('Salvar'),
-        ),
+        ElevatedButton(onPressed: save, child: const Text('Salvar')),
       ],
     );
   }

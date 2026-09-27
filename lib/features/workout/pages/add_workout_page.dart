@@ -4,7 +4,6 @@ import '../models/workout_exercise_model.dart';
 import '../data/workout_data.dart';
 import '../services/storage_service.dart';
 
-
 class AddWorkoutPage extends StatefulWidget {
   const AddWorkoutPage({super.key});
 
@@ -102,6 +101,7 @@ class _AddWorkoutPageState extends State<AddWorkoutPage> {
   Future<void> saveWorkout() async {
     final name = nameController.text.trim();
     final duration = durationController.text.trim();
+    final durationMinutes = Workout.parseDurationMinutes(duration);
     final caloriesText = caloriesController.text.trim();
 
     if (name.isEmpty) {
@@ -111,16 +111,16 @@ class _AddWorkoutPageState extends State<AddWorkoutPage> {
       return;
     }
 
-    if (duration.isEmpty) {
+    if (durationMinutes == null || durationMinutes <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Digite a duração do treino.')),
+        const SnackBar(content: Text('Digite uma duração válida em minutos.')),
       );
       return;
     }
 
     final newWorkout = Workout(
       name: name,
-      duration: duration,
+      duration: durationMinutes.toString(),
       calories: int.tryParse(caloriesText) ?? 0,
       exercises: exercises,
       date: DateTime.now(),

@@ -6,6 +6,8 @@ import '../../workout/widgets/progress_chart.dart';
 import '../../workout/pages/add_workout_page.dart';
 import '../../workout/services/storage_service.dart';
 import '../../workout/pages/edit_workout_page.dart';
+import '../../workout/pages/workout_history_page.dart';
+import '../../workout/models/workout_completion_model.dart';
 import '../../workout/models/workout_model.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,7 +18,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final List<DateTime> workoutCompletions = [];
+  final List<WorkoutCompletion> workoutCompletions = [];
+  bool _isLoadingData = true;
+  bool _hasLoadError = false;
 
   String getGreeting() {
     final hour = DateTime.now().hour;
@@ -33,27 +37,146 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> loadData() async {
-    final savedWorkouts = await StorageService.loadWorkouts();
-    final savedCompletions = await StorageService.loadWorkoutCompletions();
-
-    if (!mounted) return;
-
     setState(() {
-      workouts.clear();
-      workouts.addAll(savedWorkouts);
-      workoutCompletions
-        ..clear()
-        ..addAll(savedCompletions);
+      _isLoadingData = true;
+      _hasLoadError = false;
     });
+
+    try {
+      final savedWorkouts = await StorageService.loadWorkouts();
+      final savedCompletions = await StorageService.loadWorkoutCompletions();
+
+      if (!mounted) return;
+
+      setState(() {
+        workouts
+          ..clear()
+          ..addAll(savedWorkouts);
+        workoutCompletions
+          ..clear()
+          ..addAll(savedCompletions);
+        _isLoadingData = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingData = false;
+        _hasLoadError = true;
+      });
+    }
   }
 
-  Future<void> recordWorkoutCompletion() async {
-    final completedAt = DateTime.now();
-    await StorageService.recordWorkoutCompletion(completedAt);
+  Future<void> recordWorkoutCompletion(Workout workout) async {
+    final completion = WorkoutCompletion(
+      workoutName: workout.name,
+      completedAt: DateTime.now(),
+      duration: workout.formattedDuration,
+      calories: workout.calories,
+    );
+    await StorageService.recordWorkoutCompletion(completion);
 
     if (!mounted) return;
 
-    setState(() => workoutCompletions.add(completedAt));
+    setState(() => workoutCompletions.add(completion));
+  }
+
+  Future<void> selectAndStartWorkout(List<Workout> todayList) async {
+    if (todayList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Você ainda não tem treinos para hoje.')),
+      );
+      return;
+    }
+
+    final workout =
+        todayList.length == 1
+            ? todayList.first
+            : await showModalBottomSheet<Workout>(
+              context: context,
+              backgroundColor: const Color(0xFF1C1C2E),
+              builder:
+                  (sheetContext) => SafeArea(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight:
+                            MediaQuery.sizeOf(sheetContext).height * 0.75,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(left: 16, bottom: 12),
+                              child: Text(
+                                'Escolha um treino',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Flexible(
+                              child: ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: todayList.length,
+                                separatorBuilder:
+                                    (_, __) => const Divider(
+                                      color: Colors.white12,
+                                      height: 1,
+                                    ),
+                                itemBuilder: (context, index) {
+                                  final workout = todayList[index];
+                                  return ListTile(
+                                    leading: const Icon(
+                                      Icons.fitness_center,
+                                      color: Color(0xFF8B85FF),
+                                    ),
+                                    title: Text(
+                                      workout.name,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${workout.formattedDuration} • ${workout.exercises.length} exercícios',
+                                      style: const TextStyle(
+                                        color: Colors.white60,
+                                      ),
+                                    ),
+                                    onTap:
+                                        () => Navigator.pop(
+                                          sheetContext,
+                                          workout,
+                                        ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+            );
+
+    if (workout == null || !mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => WorkoutPage(
+              title: workout.name,
+              duration: workout.formattedDuration,
+              exercises: workout.exercises,
+              onCompleted: () => recordWorkoutCompletion(workout),
+            ),
+      ),
+    );
   }
 
   List<Workout> todayWorkouts() {
@@ -66,17 +189,28 @@ class _HomePageState extends State<HomePage> {
     }).toList();
   }
 
+  List<WorkoutCompletion> completedWorkoutsToday() {
+    final now = DateTime.now();
+
+    return workoutCompletions.where((completion) {
+      final date = completion.completedAt;
+      return date.day == now.day &&
+          date.month == now.month &&
+          date.year == now.year;
+    }).toList();
+  }
+
   int getWorkoutsThisWeek() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final monday = today.subtract(Duration(days: today.weekday - 1));
     final nextMonday = monday.add(const Duration(days: 7));
 
-    return workoutCompletions.where((completedAt) {
+    return workoutCompletions.where((completion) {
       final completionDay = DateTime(
-        completedAt.year,
-        completedAt.month,
-        completedAt.day,
+        completion.completedAt.year,
+        completion.completedAt.month,
+        completion.completedAt.day,
       );
       return !completionDay.isBefore(monday) &&
           completionDay.isBefore(nextMonday);
@@ -86,20 +220,24 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final todayList = todayWorkouts(); // ✅ CORREÇÃO
+    final completedToday = completedWorkoutsToday();
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF6366F1),
         elevation: 6,
         child: const Icon(Icons.add, size: 28),
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AddWorkoutPage()),
-          );
+        onPressed:
+            _isLoadingData || _hasLoadError
+                ? null
+                : () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddWorkoutPage()),
+                  );
 
-          await loadData();
-        },
+                  await loadData();
+                },
       ),
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
@@ -110,372 +248,405 @@ class _HomePageState extends State<HomePage> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Histórico de treinos',
+            icon: const Icon(Icons.history, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WorkoutHistoryPage()),
+              );
+            },
+          ),
+        ],
       ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${getGreeting()} 👋',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // 🔥 CARD
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color.fromARGB(255, 57, 46, 209),
-                      Color.fromARGB(255, 43, 41, 112),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Treinos hoje',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${todayList.length}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        const Text(
-                          'Calorias',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${todayList.fold<int>(0, (sum, w) => sum + w.calories)} kcal',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // BOTÃO
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color.fromARGB(255, 64, 66, 219),
-                      Color.fromARGB(255, 71, 6, 221),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () {
-                      if (todayList.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Você ainda não tem treinos para hoje.',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-
-                      final workout = todayList[0];
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (_) => WorkoutPage(
-                                title: workout.name,
-                                duration: workout.duration,
-                                exercises: workout.exercises,
-                                onCompleted: recordWorkoutCompletion,
-                              ),
-                        ),
-                      );
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                        child: Text(
-                          'Iniciar treino',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // 🔥 META SEMANAL
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1C1C2E),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Meta semanal',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      '${getWorkoutsThisWeek()} de 5 treinos concluídos',
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: (getWorkoutsThisWeek() / 5).clamp(0, 1),
-                        minHeight: 10,
-                        backgroundColor: Colors.grey,
-                        valueColor: const AlwaysStoppedAnimation(
-                          Color(0xFF6C63FF),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              const Text(
-                'Seu progresso',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // 📊 GRÁFICO
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1C1C2E),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: SizedBox(
-                  height: 160,
-                  child: ProgressChart(completions: workoutCompletions),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              const Text(
-                'Treinos de hoje',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              if (todayList.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1C1C2E),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+      body:
+          _isLoadingData
+              ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+              )
+              : _hasLoadError
+              ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.event_note_outlined,
-                        color: Color(0xFF6366F1),
-                        size: 36,
-                      ),
-                      const SizedBox(height: 10),
                       const Text(
-                        'Nenhum treino para hoje',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      const Text(
-                        'Cadastre um treino para começar sua rotina.',
+                        'Não foi possível carregar seus dados.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white60, fontSize: 13),
+                        style: TextStyle(color: Colors.white70),
                       ),
                       const SizedBox(height: 12),
                       TextButton.icon(
-                        onPressed: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AddWorkoutPage(),
-                            ),
-                          );
-                          await loadData();
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Cadastrar treino'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF8B85FF),
-                        ),
+                        onPressed: loadData,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Tentar novamente'),
                       ),
                     ],
                   ),
-                )
-              else
-                // Lista dos treinos registrados para hoje.
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 100),
-                  itemCount: todayList.length,
-                  itemBuilder: (context, index) {
-                    final workout = todayList[index];
-
-                    return Dismissible(
-                      key: Key('$index-${workout.name}'),
-                      direction: DismissDirection.endToStart,
-
-                      confirmDismiss: (direction) async {
-                        return await showDialog(
-                          context: context,
-                          builder:
-                              (context) => AlertDialog(
-                                title: const Text('Excluir treino'),
-                                content: const Text('Tem certeza?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed:
-                                        () => Navigator.pop(context, false),
-                                    child: const Text('Cancelar'),
-                                  ),
-                                  TextButton(
-                                    onPressed:
-                                        () => Navigator.pop(context, true),
-                                    child: const Text('Excluir'),
-                                  ),
-                                ],
-                              ),
-                        );
-                      },
-
-                      onDismissed: (direction) async {
-                        final removedWorkout = workout;
-
-                        setState(() {
-                          workouts.remove(workout);
-                        });
-
-                        await StorageService.saveWorkouts(workouts);
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${removedWorkout.name} removido'),
-                          ),
-                        );
-                      },
-
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        color: Colors.red,
-                        child: const Icon(Icons.delete, color: Colors.white),
-                      ),
-
-                      child: WorkoutCard(
-                        title: workout.name,
-                        duration: workout.duration,
-                        date: workout.date,
-
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (_) => WorkoutPage(
-                                    title: workout.name,
-                                    duration: workout.duration,
-                                    exercises: workout.exercises,
-                                    onCompleted: recordWorkoutCompletion,
-                                  ),
-                            ),
-                          );
-                        },
-
-                        onEdit: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (_) => EditWorkoutPage(
-                                    workout: workout,
-                                    index: workouts.indexOf(workout),
-                                  ),
-                            ),
-                          ).then((_) => loadData());
-                        },
-                      ),
-                    );
-                  },
                 ),
-            ],
-          ),
-        ),
-      ),
+              )
+              : Padding(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${getGreeting()} 👋',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // 🔥 CARD
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color.fromARGB(255, 57, 46, 209),
+                              Color.fromARGB(255, 43, 41, 112),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Treinos concluídos hoje',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${completedToday.length}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                const Text(
+                                  'Calorias',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${completedToday.fold<int>(0, (sum, completion) => sum + completion.calories)} kcal',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // BOTÃO
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color.fromARGB(255, 64, 66, 219),
+                              Color.fromARGB(255, 71, 6, 221),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () => selectAndStartWorkout(todayList),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: Text(
+                                  'Iniciar treino',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // 🔥 META SEMANAL
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1C1C2E),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Meta semanal',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              '${getWorkoutsThisWeek()} de 5 treinos concluídos',
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                            const SizedBox(height: 10),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: LinearProgressIndicator(
+                                value: (getWorkoutsThisWeek() / 5).clamp(0, 1),
+                                minHeight: 10,
+                                backgroundColor: Colors.grey,
+                                valueColor: const AlwaysStoppedAnimation(
+                                  Color(0xFF6C63FF),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      const Text(
+                        'Seu progresso',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // 📊 GRÁFICO
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1C1C2E),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: SizedBox(
+                          height: 160,
+                          child: ProgressChart(completions: workoutCompletions),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      const Text(
+                        'Treinos de hoje',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      if (todayList.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1C1C2E),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(
+                                Icons.event_note_outlined,
+                                color: Color(0xFF6366F1),
+                                size: 36,
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Nenhum treino para hoje',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              const Text(
+                                'Cadastre um treino para começar sua rotina.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white60,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              TextButton.icon(
+                                onPressed: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const AddWorkoutPage(),
+                                    ),
+                                  );
+                                  await loadData();
+                                },
+                                icon: const Icon(Icons.add),
+                                label: const Text('Cadastrar treino'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: const Color(0xFF8B85FF),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        // Lista dos treinos registrados para hoje.
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 100),
+                          itemCount: todayList.length,
+                          itemBuilder: (context, index) {
+                            final workout = todayList[index];
+
+                            return Dismissible(
+                              key: Key('$index-${workout.name}'),
+                              direction: DismissDirection.endToStart,
+
+                              confirmDismiss: (direction) async {
+                                return await showDialog(
+                                  context: context,
+                                  builder:
+                                      (context) => AlertDialog(
+                                        title: const Text('Excluir treino'),
+                                        content: const Text('Tem certeza?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed:
+                                                () => Navigator.pop(
+                                                  context,
+                                                  false,
+                                                ),
+                                            child: const Text('Cancelar'),
+                                          ),
+                                          TextButton(
+                                            onPressed:
+                                                () => Navigator.pop(
+                                                  context,
+                                                  true,
+                                                ),
+                                            child: const Text('Excluir'),
+                                          ),
+                                        ],
+                                      ),
+                                );
+                              },
+
+                              onDismissed: (direction) async {
+                                final removedWorkout = workout;
+
+                                setState(() {
+                                  workouts.remove(workout);
+                                });
+
+                                await StorageService.saveWorkouts(workouts);
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '${removedWorkout.name} removido',
+                                    ),
+                                  ),
+                                );
+                              },
+
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
+                                color: Colors.red,
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                ),
+                              ),
+
+                              child: WorkoutCard(
+                                title: workout.name,
+                                duration: workout.formattedDuration,
+                                date: workout.date,
+
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (_) => WorkoutPage(
+                                            title: workout.name,
+                                            duration: workout.formattedDuration,
+                                            exercises: workout.exercises,
+                                            onCompleted:
+                                                () => recordWorkoutCompletion(
+                                                  workout,
+                                                ),
+                                          ),
+                                    ),
+                                  );
+                                },
+
+                                onEdit: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (_) => EditWorkoutPage(
+                                            workout: workout,
+                                            index: workouts.indexOf(workout),
+                                          ),
+                                    ),
+                                  ).then((_) => loadData());
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ),
     );
   }
 }

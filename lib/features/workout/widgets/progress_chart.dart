@@ -1,10 +1,11 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../models/workout_completion_model.dart';
 
 class ProgressChart extends StatelessWidget {
   const ProgressChart({super.key, required this.completions});
 
-  final List<DateTime> completions;
+  final List<WorkoutCompletion> completions;
 
   static const _weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -18,7 +19,7 @@ class ProgressChart extends StatelessWidget {
     final workoutsPerDay = List<int>.filled(7, 0);
 
     for (final completion in completions) {
-      final completionDay = _dateOnly(completion);
+      final completionDay = _dateOnly(completion.completedAt);
       final dayIndex = completionDay.difference(monday).inDays;
       if (dayIndex >= 0 && dayIndex < workoutsPerDay.length) {
         workoutsPerDay[dayIndex]++;

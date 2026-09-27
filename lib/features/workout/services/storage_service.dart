@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/workout_completion_model.dart';
 import '../models/workout_model.dart';
 
 class StorageService {
@@ -46,29 +47,53 @@ class StorageService {
         .toList();
   }
 
-  static Future<void> recordWorkoutCompletion(DateTime completedAt) async {
+  static Future<void> recordWorkoutCompletion(
+    WorkoutCompletion completion,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final completions = prefs.getStringList(completionKey) ?? [];
-    completions.add(completedAt.toIso8601String());
+    completions.add(jsonEncode(completion.toMap()));
     final saved = await prefs.setStringList(completionKey, completions);
     if (!saved) {
       throw StateError('Não foi possível salvar a conclusão do treino.');
     }
   }
 
-  static Future<List<DateTime>> loadWorkoutCompletions() async {
+  static Future<List<WorkoutCompletion>> loadWorkoutCompletions() async {
     final prefs = await SharedPreferences.getInstance();
     final completions = prefs.getStringList(completionKey) ?? [];
 
     return completions
         .map((value) {
           try {
-            return DateTime.parse(value);
+            final decoded = jsonDecode(value);
+            if (decoded is Map) {
+              return WorkoutCompletion.fromMap(
+                Map<String, dynamic>.from(decoded),
+              );
+            }
+            if (decoded is String) {
+              final legacyDate = DateTime.tryParse(decoded);
+              if (legacyDate != null) {
+                return WorkoutCompletion(
+                  workoutName: 'Treino concluído',
+                  completedAt: legacyDate,
+                );
+              }
+            }
+            return null;
           } on FormatException {
+            final legacyDate = DateTime.tryParse(value);
+            if (legacyDate == null) return null;
+            return WorkoutCompletion(
+              workoutName: 'Treino concluído',
+              completedAt: legacyDate,
+            );
+          } on TypeError {
             return null;
           }
         })
-        .whereType<DateTime>()
+        .whereType<WorkoutCompletion>()
         .toList();
   }
 }
