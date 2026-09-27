@@ -33,6 +33,8 @@ class _HomePageState extends State<HomePage> {
   Future<void> loadData() async {
     final savedWorkouts = await StorageService.loadWorkouts();
 
+    if (!mounted) return;
+
     setState(() {
       workouts.clear();
       workouts.addAll(savedWorkouts);
@@ -51,10 +53,13 @@ class _HomePageState extends State<HomePage> {
 
   int getWorkoutsThisWeek() {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final monday = today.subtract(Duration(days: today.weekday - 1));
+    final nextMonday = monday.add(const Duration(days: 7));
 
     return workouts.where((w) {
-      final difference = now.difference(w.date).inDays;
-      return difference >= 0 && difference < 7;
+      final workoutDay = DateTime(w.date.year, w.date.month, w.date.day);
+      return !workoutDay.isBefore(monday) && workoutDay.isBefore(nextMonday);
     }).length;
   }
 
@@ -94,8 +99,8 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Olá, Camila 👋',
+              Text(
+                '${getGreeting()} 👋',
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -181,20 +186,29 @@ class _HomePageState extends State<HomePage> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () {
-                      if (todayList.isNotEmpty) {
-                        final workout = todayList[0];
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => WorkoutPage(
-                                  title: workout.name,
-                                  duration: workout.duration,
-                                  exercises: workout.exercises,
-                                ),
+                      if (todayList.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Você ainda não tem treinos para hoje.',
+                            ),
                           ),
                         );
+                        return;
                       }
+
+                      final workout = todayList[0];
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (_) => WorkoutPage(
+                                title: workout.name,
+                                duration: workout.duration,
+                                exercises: workout.exercises,
+                              ),
+                        ),
+                      );
                     },
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
@@ -275,7 +289,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 child: SizedBox(
                   height: 160,
-                  child: ProgressChart(workouts: todayList),
+                  child: ProgressChart(workouts: workouts),
                 ),
               ),
 
@@ -292,99 +306,150 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 10),
 
-              // 🔥 LISTA (AGORA CORRIGIDA)
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 100),
-                itemCount: todayList.length,
-                itemBuilder: (context, index) {
-                  final workout = todayList[index];
-
-                  return Dismissible(
-                    key: Key('$index-${workout.name}'),
-                    direction: DismissDirection.endToStart,
-
-                    confirmDismiss: (direction) async {
-                      return await showDialog(
-                        context: context,
-                        builder:
-                            (context) => AlertDialog(
-                              title: const Text('Excluir treino'),
-                              content: const Text('Tem certeza?'),
-                              actions: [
-                                TextButton(
-                                  onPressed:
-                                      () => Navigator.pop(context, false),
-                                  child: const Text('Cancelar'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  child: const Text('Excluir'),
-                                ),
-                              ],
-                            ),
-                      );
-                    },
-
-                    onDismissed: (direction) async {
-                      final removedWorkout = workout;
-
-                      setState(() {
-                        workouts.remove(workout);
-                      });
-
-                      await StorageService.saveWorkouts(workouts);
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${removedWorkout.name} removido'),
+              if (todayList.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1C1C2E),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.event_note_outlined,
+                        color: Color(0xFF6366F1),
+                        size: 36,
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Nenhum treino para hoje',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
                         ),
-                      );
-                    },
+                      ),
+                      const SizedBox(height: 5),
+                      const Text(
+                        'Cadastre um treino para começar sua rotina.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white60, fontSize: 13),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AddWorkoutPage(),
+                            ),
+                          );
+                          await loadData();
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Cadastrar treino'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF8B85FF),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                // Lista dos treinos registrados para hoje.
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 100),
+                  itemCount: todayList.length,
+                  itemBuilder: (context, index) {
+                    final workout = todayList[index];
 
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      color: Colors.red,
-                      child: const Icon(Icons.delete, color: Colors.white),
-                    ),
+                    return Dismissible(
+                      key: Key('$index-${workout.name}'),
+                      direction: DismissDirection.endToStart,
 
-                    child: WorkoutCard(
-                      title: workout.name,
-                      duration: workout.duration,
-                      date: workout.date,
+                      confirmDismiss: (direction) async {
+                        return await showDialog(
+                          context: context,
+                          builder:
+                              (context) => AlertDialog(
+                                title: const Text('Excluir treino'),
+                                content: const Text('Tem certeza?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed:
+                                        () => Navigator.pop(context, false),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                  TextButton(
+                                    onPressed:
+                                        () => Navigator.pop(context, true),
+                                    child: const Text('Excluir'),
+                                  ),
+                                ],
+                              ),
+                        );
+                      },
 
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => WorkoutPage(
-                                  title: workout.name,
-                                  duration: workout.duration,
-                                  exercises: workout.exercises,
-                                ),
+                      onDismissed: (direction) async {
+                        final removedWorkout = workout;
+
+                        setState(() {
+                          workouts.remove(workout);
+                        });
+
+                        await StorageService.saveWorkouts(workouts);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${removedWorkout.name} removido'),
                           ),
                         );
                       },
 
-                      onEdit: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => EditWorkoutPage(
-                                  workout: workout,
-                                  index: workouts.indexOf(workout),
-                                ),
-                          ),
-                        ).then((_) => loadData());
-                      },
-                    ),
-                  );
-                },
-              ),
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        color: Colors.red,
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+
+                      child: WorkoutCard(
+                        title: workout.name,
+                        duration: workout.duration,
+                        date: workout.date,
+
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => WorkoutPage(
+                                    title: workout.name,
+                                    duration: workout.duration,
+                                    exercises: workout.exercises,
+                                  ),
+                            ),
+                          );
+                        },
+
+                        onEdit: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => EditWorkoutPage(
+                                    workout: workout,
+                                    index: workouts.indexOf(workout),
+                                  ),
+                            ),
+                          ).then((_) => loadData());
+                        },
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         ),
